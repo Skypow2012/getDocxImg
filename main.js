@@ -7,7 +7,7 @@ if (!argv[0]) {
 }
 let inputStr = argv.join(' ');
 if (inputStr.indexOf('.docx') > -1) {
-    const needGetFileName = argv[0];
+    const needGetFileName = inputStr.replace(/\\/g,'\/');
     getDocxImage(needGetFileName);
 } else {
     const needGetDirPath = inputStr.replace(/\\/g,'\/');
@@ -21,7 +21,32 @@ function getDirImages(dirPath) {
             getDocxImage(`${dirPath}/${fileName}`);
         }
     }
+}
 
+function getText(xml) {
+    xml = xml.replace(/<\/w:p>/g, '\r\n');
+    let i = 0;
+    xml = xml.replace(/<[^<>]*?docPr[^<>]*?id="(\d+)"[^<>]*?>/g, 'Image_$1');
+    xml = xml.replace(/<w:b\/>/g, '【加粗】');
+    xml = xml.replace(/<[^<>]*?center[^<>]*?>/g, '【居中】');
+    let text = xml.replace(/<\/*.*?>/g, '');
+    text = text.replace(/([^>]{1})【加粗】/g, '$1');
+    text = text.replace(/\r\n */g, '\r\n');
+
+    text = text.replace(/供图/g, '摄');
+    text = text.replace(/\r\n([^【]*)\r\n/g, '\r\n【普通】$1\r\n');
+    return text;
+}
+function fixText2Xml(text) {
+    text = text.replace(/【普通】(.*?)\r\n/g, '<p style="text-indent: 32px;"><span style="font-family:宋体">$1</span></p>\r\n')
+    text = text.replace(/【居中】【加粗】(.*?)\r\n/g, '<p style="text-align:center"><span style="font-family:黑体">$1</span></p>\r\n')
+    text = text.replace(/【居中】(.*?)\r\n/g, '<p style="text-align:center"><span style="font-family:宋体">$1</span></p>\r\n')
+    text = text.replace(/【加粗】(.*?)\r\n/g, '<p><span style="font-family:黑体">$1</span></p>\r\n')
+    text = text.replace(/Image_(\d*)/g, `
+    <img src="./demo/word/media/image$1.jpeg") no-repeat center center;border:1px solid #ddd"/>
+    `);//width="285" height="426" 
+    // fs.writeFileSync('1.html', text)
+    return text;
 }
 function getDocxImage(imagePath) {
     const parentDirPath = imagePath.match(/(.*)[\/\\].*/)[1];;
@@ -56,12 +81,15 @@ function getDocxImage(imagePath) {
         let images = fs.readdirSync(`${parentDirPath}/${tempDirName}/word/media`);
         let wordXml = fs.readFileSync(`${parentDirPath}/${tempDirName}/word/document.xml`).toString();
         // console.log(wordXml.toString())
-        let expReg = /<w:t>([^<>]*?摄[^<>]*?)<\/w:t>/g;
+        // let expReg = /<w:t>([^<>]*?摄[^<>]*?)<\/w:t>/g;
+        let xmlText = getText(wordXml);
+        let expReg = /Image_\d*\r\n(.*?)\r\n/g;
         let matched = '';
         let matches = [];
-        while (matched = expReg.exec(wordXml)) {
-            matches.push(matched[1]);
+        while (matched = expReg.exec(xmlText)) {
+            matches.push(matched[1].replace(/【.*?】/g, ''));
         }
+        console.log(matches);
         if (!fs.existsSync(`${parentDirPath}/${tarDirName}`)) {
             fs.mkdirSync(`${parentDirPath}/${tarDirName}`);
         }
@@ -73,7 +101,7 @@ function getDocxImage(imagePath) {
             fs.writeFileSync(`${parentDirPath}/${tarDirName}/${tarName}.${imageExtName}`, imageBin);
             console.log(` 生成 ${parentDirPath}/${tarDirName}/${tarName}.${imageExtName}`);
         }
-        deleteFolder(`${parentDirPath}/${tempDirName}`);
+        // deleteFolder(`${parentDirPath}/${tempDirName}`);
         console.log(`成功获取 ${fileName}`);
     }, 1000);
 }
