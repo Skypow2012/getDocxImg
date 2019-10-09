@@ -8,11 +8,14 @@ def doc_to_docx(path):
         word = client.Dispatch('Word.Application')
         doc = word.Documents.Open(path)  # 目标路径下的文件
         print('开始转换', path)
-        doc.SaveAs(os.path.splitext(path)[0]+".docx")  # 转化后路径下的文件
+        doc.SaveAs(os.path.splitext(path)[0]+".bak.docx", 16)  # 转化后路径下的文件
         doc.Close()
-        print('转换结束', os.path.splitext(path)[0]+".docx")
+        print('转换结束', os.path.splitext(path)[0]+".bak.docx")
         word.Quit()
 
-path = os.path.abspath(sys.argv[1])
+argv = sys.argv[1:100]
+print(argv);
+path = os.path.abspath(" ".join(argv))
+print(path);
 # path = "C:/Users/maxmon/Desktop/demo/东北凤仙花.doc"#填写文件路径
 doc_to_docx(path)
