@@ -7,20 +7,44 @@ if (!argv[0]) {
 }
 let inputStr = argv.join(' ');
 if (inputStr.indexOf('.docx') > -1) {
-    const needGetFileName = inputStr.replace(/\\/g,'\/');
+    const needGetFileName = inputStr.replace(/\\/g, '\/');
     getDocxImage(needGetFileName);
+} else if (inputStr.indexOf('.doc') > -1) {
+    const needGetFileName = inputStr.replace(/\\/g, '\/');
+    tranDoc2Docx(needGetFileName, getDocxImage);
 } else {
-    const needGetDirPath = inputStr.replace(/\\/g,'\/');
+    const needGetDirPath = inputStr.replace(/\\/g, '\/');
     getDirImages(needGetDirPath)
 }
 function getDirImages(dirPath) {
     let fileNames = fs.readdirSync(dirPath);
     for (let i = 0; i < fileNames.length; i++) {
         const fileName = fileNames[i];
-        if (fileName.indexOf('.docx')>-1) {
+        if (fileName.indexOf('.docx') > -1) {
             getDocxImage(`${dirPath}/${fileName}`);
         }
+        if (fileName.indexOf('.doc') > -1) {
+            tranDoc2Docx(`${dirPath}/${fileName}`, getDocxImage);
+        }
     }
+}
+
+function tranDoc2Docx(path, cb) {
+    var exec = require('child_process').exec;
+    function execute() {
+        var cmd = `py ${__dirname}/py/demo.py ${path}`;
+        console.log(cmd);
+        exec(cmd, function (error, stdout, stderr) {
+            if (error) {
+                console.log(error);
+            } else {
+                console.log("成功转换", path);
+                let tarPath = path.replace('.doc', '.docx')
+                cb(tarPath);
+            }
+        });
+    }
+    execute();
 }
 
 function getText(xml) {
@@ -51,19 +75,19 @@ function fixText2Xml(text) {
 function getDocxImage(imagePath) {
     const parentDirPath = imagePath.match(/(.*)[\/\\].*/)[1];;
     const fileName = imagePath.match(/.*[\/\\](.*)/)[1];// '植物文章样例.docx';
-    
+
     const tempDirName = 'temp' + new Date().getTime();
     const tarDirName = fileName.match(/(.*)\..*/)[1];
-    
+
     const f = fs.createReadStream(`${parentDirPath}/${fileName}`)
     f.pipe(unzip.Extract({ path: `${parentDirPath}/${tempDirName}` }))
     function deleteFolder(path) {
         var files = [];
-        if( fs.existsSync(path) ) {
+        if (fs.existsSync(path)) {
             files = fs.readdirSync(path);
-            files.forEach(function(file,index){
+            files.forEach(function (file, index) {
                 var curPath = path + "/" + file;
-                if(fs.statSync(curPath).isDirectory()) { // recurse
+                if (fs.statSync(curPath).isDirectory()) { // recurse
                     deleteFolder(curPath);
                 } else { // delete file
                     fs.unlinkSync(curPath);
