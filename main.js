@@ -54,11 +54,15 @@ function tranDoc2Docx(path, cb) {
 }
 
 function getText(xml) {
+    xml = xml.replace(/instrText.*?<\/w:instrText/g, '');
     xml = xml.replace(/<\/w:p>/g, '\r\n');
     let i = 0;
-    xml = xml.replace(/<[^<>]*?docPr[^<>]*?id="(\d+)"[^<>]*?>/g, 'Image_$1');
-    if (xml.indexOf('Image_' == -1)) {
-        xml = xml.replace(/<[^<>]*?shape id="图片 (\d+)"[^<>]*?>/g, 'Image_$1');
+    // xml = xml.replace(/<[^<>]*?docPr[^<>]*?id="(\d+)"[^<>]*?>/g, 'Image_$1');
+    // if (xml.indexOf('Image_' == -1)) {
+    //     xml = xml.replace(/<[^<>]*?shape id="图片 (\d+)"[^<>]*?>/g, 'Image_$1');
+    // }
+    while (xml.indexOf('<wp:docPr ') > -1 || xml.indexOf('<v:shape ') > -1) {
+        xml = xml.replace(/<(wp:docPr |v:shape )[^<>]*?>/, 'Image_' + ++i);
     }
     xml = xml.replace(/<w:b\/>/g, '【加粗】');
     xml = xml.replace(/<[^<>]*?center[^<>]*?>/g, '【居中】');
