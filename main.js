@@ -6,6 +6,7 @@ if (!argv[0]) {
     console.log('请输入待转换目录 或 文件名！');
 }
 let inputStr = argv.join(' ');
+console.log(argv, inputStr);
 if (inputStr.indexOf('.docx') > -1) {
     const needGetFileName = inputStr.replace(/\\/g, '\/');
     getDocxImage(needGetFileName);
@@ -14,24 +15,27 @@ if (inputStr.indexOf('.docx') > -1) {
     tranDoc2Docx(needGetFileName, getDocxImage);
 } else {
     const needGetDirPath = inputStr.replace(/\\/g, '\/');
+    console.log(needGetDirPath)
     getDirImages(needGetDirPath)
 }
 function getDirImages(dirPath) {
     let fileNames = fs.readdirSync(dirPath);
     for (let i = 0; i < fileNames.length; i++) {
         const fileName = fileNames[i];
-        if (fileName.indexOf('.bak.docx') > -1) {
-            console.log('delete', fileName);
-            fs.unlinkSync(`${dirPath}/${fileName}`)
-        } else if (fileName.indexOf('.docx') > -1) {
-            console.log(fileName, 'fileName')
-            getDocxImage(`${dirPath}/${fileName}`);
-        } else if (fileName.indexOf('.doc') > -1) {
-            console.log(fileName, 'fileName')
-            tranDoc2Docx(`${dirPath}/${fileName}`, getDocxImage);
-        } else if (fileName.indexOf('temp') == 0 && fs.statSync(`${dirPath}/${fileName}`).isDirectory()) {
-            deleteFolder(`${dirPath}/${fileName}`);
-        }
+        setTimeout(() => {
+            if (fileName.indexOf('.bak.docx') > -1) {
+                console.log('delete', fileName);
+                fs.unlinkSync(`${dirPath}/${fileName}`)
+            } else if (fileName.indexOf('.docx') > -1) {
+                console.log(fileName, 'fileName')
+                getDocxImage(`${dirPath}/${fileName}`);
+            } else if (fileName.indexOf('.doc') > -1) {
+                console.log(fileName, 'fileName')
+                tranDoc2Docx(`${dirPath}/${fileName}`, getDocxImage);
+            } else if (fileName.indexOf('temp') == 0 && fs.statSync(`${dirPath}/${fileName}`).isDirectory()) {
+                deleteFolder(`${dirPath}/${fileName}`);
+            }
+        }, i*5000);
     }
 }
 
@@ -104,6 +108,12 @@ function getDocxImage(imagePath) {
         if (fs.existsSync(mediaPath)) {
             images = fs.readdirSync(mediaPath);
         }
+        console.log(images)
+        images.sort((a,b)=>{
+            let _a = Number(a.match(/(\d*)\./)[1]);
+            let _b = Number(b.match(/(\d*)\./)[1]);
+            return _a - _b;
+        })
         if (!images.length) {
             tarDirName = '无图-' + tarDirName;
         }
@@ -111,11 +121,27 @@ function getDocxImage(imagePath) {
         // console.log(wordXml.toString())
         // let expReg = /<w:t>([^<>]*?摄[^<>]*?)<\/w:t>/g;
         let xmlText = getText(wordXml);
-        let expReg = /Image_\d*\r\n(.*?)\r\n/g;
-        let matched = '';
+        let _xmlText = xmlText;
+        let expReg = /Image_\d*[^\d]*?\r\n(.*?)\r\n/;
+        let matchedStr = '';
+        let lastMatchedStr = '';
+        let dupTimes = 1;
         let matches = [];
-        while (matched = expReg.exec(xmlText)) {
-            matches.push(matched[1].replace(/【.*?】/g, ''));
+        // while (matched = expReg.exec(xmlText)) {
+        //     matches.push(matched[1].replace(/【.*?】/g, ''));
+        // }
+        console.log(_xmlText)
+        while (_xmlText.indexOf('Image_') > -1) {
+            let matched = expReg.exec(_xmlText);
+            matchedStr = matched[1].replace(/【.*?】/, '');
+            if (matchedStr == lastMatchedStr) {
+                matches.push(`${matchedStr}${++dupTimes}`);
+            } else {
+                dupTimes = 1;
+                matches.push(matchedStr);
+            }
+            _xmlText = _xmlText.replace(/Image_/, '');
+            lastMatchedStr = matchedStr;
         }
         console.log(matches);
         if (!fs.existsSync(`${parentDirPath}/${tarDirName}`)) {
